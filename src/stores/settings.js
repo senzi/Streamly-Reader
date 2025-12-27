@@ -6,7 +6,7 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
-    speed: 50,
+    speed: 65,
     fontKey: 'system',
   }),
   actions: {

@@ -46,7 +46,9 @@ const scheduleRender = () => {
 
 const scrollToBottom = () => {
   if (!readerRef.value) return
-  readerRef.value.scrollTop = readerRef.value.scrollHeight
+  const offset = 170
+  readerRef.value.scrollTop =
+    readerRef.value.scrollHeight - readerRef.value.clientHeight + offset
 }
 
 const stopTimer = () => {
@@ -56,9 +58,14 @@ const stopTimer = () => {
   }
 }
 
+const jitterInterval = (base) => {
+  const factor = 1 + (Math.random() * 0.2 - 0.1)
+  return Math.max(20, Math.round(base * factor))
+}
+
 const runTick = () => {
   if (!isRunning.value) return
-  const interval = speedToInterval(settings.speed)
+  const interval = jitterInterval(speedToInterval(settings.speed))
   let chunkSize = chunkSizeForSpeed(settings.speed)
   if (tokens.length > 20000 && settings.speed >= 50) {
     chunkSize = Math.max(chunkSize, 6)
@@ -86,19 +93,11 @@ const start = () => {
   runTick()
 }
 
-const stop = () => {
-  stopTimer()
-  isRunning.value = false
-}
-
-const replay = () => {
-  if (!inputText.value.trim()) return
+const handleInputKeydown = (event) => {
+  if (event.key !== 'Enter') return
+  if (event.shiftKey) return
+  event.preventDefault()
   start()
-}
-
-const copyAll = async () => {
-  if (!inputText.value.trim()) return
-  await navigator.clipboard.writeText(inputText.value)
 }
 
 const refreshFonts = async () => {
@@ -162,7 +161,17 @@ onMounted(async () => {
     <header class="top-bar">
       <div class="brand">
         <span class="brand-title">流式阅读器</span>
-        <span class="brand-sub">节奏感阅读 · Markdown/LaTeX 即时呈现</span>
+        <div class="brand-sub meta">
+          <a
+            class="brand-sub link"
+            href="https://github.com/senzi/Streamly-Reader"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
+          </a>
+          <span class="brand-sub text">MIT协议 · vibe coding</span>
+        </div>
       </div>
       <div class="status">
         <span class="status-dot" :class="{ running: isRunning, done: isCompleted }"></span>
@@ -172,11 +181,11 @@ onMounted(async () => {
 
     <main class="reader-shell">
       <section class="reader-panel">
-        <div class="reader-title">阅读区</div>
         <div class="reader" ref="readerRef">
           <div v-if="!displayedText" class="empty">
-            <p>在下方输入文本，点击“开始”，内容会像打字机一样流式出现。</p>
+            <p>在下方输入文本，回车开始流式输出。</p>
             <p>支持标题、列表、代码块以及行内/块级公式。</p>
+            <p>Shift + 回车可以换行。</p>
           </div>
           <div
             v-else
@@ -207,17 +216,12 @@ onMounted(async () => {
           上传字体
           <input type="file" accept=".ttf,.otf,.woff" @change="handleFontUpload" />
         </label>
-        <button class="btn primary" :disabled="!inputText.trim()" @click="start">开始</button>
-        <button class="btn ghost" :disabled="!isRunning" @click="stop">停止</button>
-        <button class="btn ghost" :disabled="!isCompleted" @click="replay">再读一遍</button>
-        <button class="btn ghost" :disabled="!inputText.trim()" @click="copyAll">
-          复制内容
-        </button>
       </div>
       <textarea
         v-model="inputText"
         placeholder="粘贴或输入要阅读的文本，支持 Markdown 与 LaTeX…"
         rows="5"
+        @keydown="handleInputKeydown"
       ></textarea>
     </footer>
   </div>
